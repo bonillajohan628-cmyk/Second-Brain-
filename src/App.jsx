@@ -56,26 +56,19 @@ export default function App() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
   }
 
-  // Consulta IA
+    // Consulta IA
   const askAI = async () => {
-    if (!aiPrompt.trim()) return
     setLoadingAi(true)
     setAiResponse('Pensando respuesta...')
     try {
-      const res = await fetch('https://text.pollinations.ai/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: aiPrompt }],
-          model: 'openai'
-        })
-      })
-      const text = await res.text()
-      setAiResponse(text || 'No se obtuvo respuesta.')
-    } catch (err) {
-      setAiResponse('Error de conexión con la IA.')
+      const res = await fetch('https://text.pollinations.ai/' + encodeURIComponent(aiPrompt))
+      const data = await res.text()
+      setAiResponse(data)
+    } catch (error) {
+      setAiResponse('Error al conectar con la IA.')
+    } finally {
+      setLoadingAi(false)
     }
-    setLoadingAi(false)
   }
 
   const saveAiToNotes = () => {
