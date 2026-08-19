@@ -16,8 +16,10 @@ export default function App() {
   const [tab, setTab] = useState('inicio')
   const [streak] = useState(1)
   const [studyMin, setStudyMin] = useState(0)
+
   const [tasks, setTasks] = useState([{ id: 1, text: 'Completar sesión de estudio', done: false }])
   const [newTask, setNewTask] = useState('')
+
   const [habits, setHabits] = useState(['Leer 20 min', 'Hacer ejercicio'])
   const [newHabit, setNewHabit] = useState('')
 
@@ -34,6 +36,8 @@ export default function App() {
   const [memories, setMemories] = useState([])
   const [memoryType, setMemoryType] = useState('Meta')
   const [memoryText, setMemoryText] = useState('')
+  const [reminderMinutes, setReminderMinutes] = useState('')
+
   const [studyTopic, setStudyTopic] = useState('')
   const [aiAnswer, setAiAnswer] = useState('')
   const [loadingAI, setLoadingAI] = useState(false)
@@ -46,6 +50,7 @@ export default function App() {
     } else if (pomodoroTime === 0 && isPomoRunning) {
       setIsPomoRunning(false)
       setStudyMin((prev) => prev + 25)
+      alert('¡Pomodoro completado!')
     }
     return () => clearInterval(timer)
   }, [isPomoRunning, pomodoroTime])
@@ -67,18 +72,47 @@ export default function App() {
   const handleGoogleLoginSubmit = (e) => {
     e.preventDefault()
     if (!loginName.trim()) return
-    const userData = { name: loginName, email: loginEmail || `${loginName.toLowerCase().replace(/\s+/g, '')}@gmail.com` }
+    const userData = {
+      name: loginName,
+      email: loginEmail || `${loginName.toLowerCase().replace(/\s+/g, '')}@gmail.com`
+    }
     setUser(userData)
     localStorage.setItem('sb_user', JSON.stringify(userData))
     setShowAuthModal(false)
   }
 
-  const handleLogout = () => { setUser(null); localStorage.removeItem('sb_user') }
-  const handleAddTask = () => { if(!newTask.trim()) return; setTasks([...tasks, { id: Date.now(), text: newTask, done: false }]); setNewTask('') }
-  const toggleTask = (id) => { setTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t)) }
-  const handleAddHabit = () => { if(!newHabit.trim()) return; setHabits([...habits, newHabit]); setNewHabit('') }
-  const handleAddDistraction = () => { if(!distractionMin) return; setDistractions([...distractions, { category: distractionCategory, min: distractionMin }]); setDistractionMin('') }
-  const handleAddMemory = () => { if (!memoryText.trim()) return; setMemories([...memories, { type: memoryType, text: memoryText }]); setMemoryText('') }
+  const handleLogout = () => {
+    setUser(null)
+    localStorage.removeItem('sb_user')
+  }
+
+  const handleAddTask = () => {
+    if (!newTask.trim()) return
+    setTasks([...tasks, { id: Date.now(), text: newTask, done: false }])
+    setNewTask('')
+  }
+
+  const toggleTask = (id) => {
+    setTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t))
+  }
+
+  const handleAddHabit = () => {
+    if (!newHabit.trim()) return
+    setHabits([...habits, newHabit])
+    setNewHabit('')
+  }
+
+  const handleAddDistraction = () => {
+    if (!distractionMin) return
+    setDistractions([...distractions, { category: distractionCategory, min: distractionMin }])
+    setDistractionMin('')
+  }
+
+  const handleAddMemory = () => {
+    if (!memoryText.trim()) return
+    setMemories([...memories, { type: memoryType, text: memoryText }])
+    setMemoryText('')
+  }
 
   const askAI = async (promptText) => {
     if (!promptText || !promptText.trim()) return
@@ -86,8 +120,14 @@ export default function App() {
     setAiAnswer('⚡ Consultando...')
     try {
       const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(promptText)}?model=mistral`)
-      if (res.ok) setAiAnswer(await res.text())
-    } catch (e) { setAiAnswer('Error al conectar') }
+      if (res.ok) {
+        setAiAnswer(await res.text())
+      } else {
+        setAiAnswer('Ocurrió un error con el servicio de IA.')
+      }
+    } catch (e) {
+      setAiAnswer('Error de conexión con la IA.')
+    }
     setLoadingAI(false)
   }
 
@@ -99,80 +139,221 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className="login-wrapper">
-        <div className="login-center-content">
-          <h1 className="brand-title">Second Brain</h1>
-          <button className="btn-google-login" onClick={() => setShowAuthModal(true)}>Continuar con Google</button>
+      <div className="container" style={{ paddingTop: '60px', textAlign: 'center' }}>
+        <div className="card">
+          <h1 style={{ marginBottom: '10px', color: '#58a6ff' }}>Second Brain</h1>
+          <p style={{ marginBottom: '20px', fontSize: '0.9rem' }}>Tu espacio de organización personal.</p>
+          <button className="btn-green-main" onClick={() => setShowAuthModal(true)}>Continuar con Google</button>
         </div>
         {showAuthModal && (
-          <div className="modal-overlay">
-            <div className="card">
-              <h3>Ingresar</h3>
-              <form onSubmit={handleGoogleLoginSubmit}>
-                <input placeholder="Nombre" value={loginName} onChange={(e) => setLoginName(e.target.value)} required />
-                <button type="submit" className="btn-green-main">Entrar</button>
-              </form>
-            </div>
+          <div className="card" style={{ marginTop: '20px' }}>
+            <h3>Ingresar datos</h3>
+            <form onSubmit={handleGoogleLoginSubmit}>
+              <input placeholder="Nombre" value={loginName} onChange={(e) => setLoginName(e.target.value)} required style={{ marginBottom: '10px' }} />
+              <button type="submit" className="btn-green-main">Ingresar</button>
+            </form>
           </div>
         )}
       </div>
     )
   }
+
   return (
     <div>
-      <button onClick={toggleTheme} style={{position: 'fixed', top: 15, right: 15, zIndex: 999}}>{theme === 'dark' ? '☀️' : '🌙'}</button>
+      <header className="top-header">
+        <h2>Second Brain</h2>
+        <button className="theme-toggle-btn" onClick={toggleTheme}>
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
+      </header>
+
       <main className="container">
         {tab === 'inicio' && (
           <>
-            <div className="card streak-hero"><div className="streak-number">{streak}</div><div className="streak-sub">DÍAS DE RACHA</div></div>
-            <div className="card"><h3>Tareas pendientes</h3>
-              <div className="input-row"><input placeholder="Añadir tarea" value={newTask} onChange={(e) => setNewTask(e.target.value)} /><button className="btn-icon-square" onClick={handleAddTask}>+</button></div>
-              {tasks.map(t => <div key={t.id}><input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id)} /> {t.text}</div>)}
+            <div className="card streak-hero">
+              <div className="streak-number">{streak}</div>
+              <div className="streak-sub">DÍAS DE RACHA</div>
             </div>
-            <div className="card"><h3>Memoria</h3>
-              <input value={memoryText} onChange={(e) => setMemoryText(e.target.value)} placeholder="Escribe..." />
-              <button className="btn-green-main" onClick={handleAddMemory}>Guardar</button>
-              {memories.map((m, i) => <div key={i} className="memory-item">[{m.type}] {m.text}</div>)}
+
+            <div className="card">
+              <h3>Tareas pendientes</h3>
+              <div className="input-row">
+                <input placeholder="Añadir tarea" value={newTask} onChange={(e) => setNewTask(e.target.value)} />
+                <button className="btn-icon-square" onClick={handleAddTask}>+</button>
+              </div>
+              {tasks.map(t => (
+                <div key={t.id} className={`task-item ${t.done ? 'done' : ''}`}>
+                  <input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id)} />
+                  <span>{t.text}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="card">
+              <h3>Memoria / Recordatorios</h3>
+              <div className="tags-row">
+                {['Meta', 'Idea', 'Proyecto', 'Nota'].map(type => (
+                  <button 
+                    key={type} 
+                    className={`tag-btn ${memoryType === type ? 'active' : ''}`}
+                    onClick={() => setMemoryType(type)}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+              <input 
+                placeholder="Escribe lo que quieres recordar..." 
+                value={memoryText} 
+                onChange={(e) => setMemoryText(e.target.value)}
+                style={{ marginBottom: '10px' }}
+              />
+              <button className="btn-green-main" onClick={handleAddMemory}>Guardar Memoria</button>
+              
+              {memories.length > 0 && (
+                <div style={{ marginTop: '15px' }}>
+                  {memories.map((m, i) => (
+                    <div key={i} style={{ fontSize: '0.85rem', padding: '6px 0', borderBottom: '1px solid #21262d' }}>
+                      <strong>[{m.type}]</strong> {m.text}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         )}
+
         {tab === 'habitos' && (
-          <div className="card"><h3>Mis Hábitos</h3>
-            {habits.map((h, i) => <div key={i} className="habit-item">🌱 {h}</div>)}
-            <div className="input-row"><input placeholder="Nuevo hábito" value={newHabit} onChange={(e) => setNewHabit(e.target.value)} /><button className="btn-icon-square" onClick={handleAddHabit}>+</button></div>
-          </div>
-        )}
-        {tab === 'estudio' && (
-          <div className="card timer-container"><h3>Pomodoro</h3>
-            <div className="circle-timer"><div className="timer-time">{formatSeconds(pomodoroTime)}</div></div>
-            <button className="btn-green-main" onClick={() => setIsPomoRunning(!isPomoRunning)}>{isPomoRunning ? '⏸ Pausar' : '▶ Iniciar'}</button>
-            <input placeholder="Tema IA" value={studyTopic} onChange={(e) => setStudyTopic(e.target.value)} />
-            <button className="btn-green-main" onClick={() => askAI(studyTopic)} disabled={loadingAI}>Consultar IA</button>
-            {aiAnswer && <div className="card ai-response">{aiAnswer}</div>}
-          </div>
-        )}
-        {tab === 'enfoque' && (
-          <div className="card timer-container"><h3>Modo Enfoque</h3>
-            <div className="circle-timer"><div className="timer-time">{formatSeconds(focusTime)}</div></div>
-            <button className="btn-green-main" onClick={() => setIsFocusRunning(!isFocusRunning)}>{isFocusRunning ? '⏸ Detener' : '🌙 Iniciar Enfoque'}</button>
-            <div className="tags-row">
-              <button className={`tag-btn ${ambientSound === 'rain' ? 'active' : ''}`} onClick={() => setAmbientSound('rain')}>🌧️ Lluvia</button>
-              <button className={`tag-btn ${ambientSound === 'lofi' ? 'active' : ''}`} onClick={() => setAmbientSound('lofi')}>🎧 Lo-Fi</button>
-              <button className={`tag-btn ${ambientSound === 'none' ? 'active' : ''}`} onClick={() => setAmbientSound('none')}>Apagar</button>
+          <div className="card">
+            <h3>Mis Hábitos</h3>
+            <div className="input-row">
+              <input placeholder="Nuevo hábito" value={newHabit} onChange={(e) => setNewHabit(e.target.value)} />
+              <button className="btn-icon-square" onClick={handleAddHabit}>+</button>
             </div>
-            {ambientSound === 'rain' && <audio autoPlay loop src="https://assets.mixkit.co/active_storage/sfx/2515/2515-preview.mp3" />}
-            {ambientSound === 'lofi' && <audio autoPlay loop src="https://assets.mixkit.co/active_storage/sfx/1253/1253-preview.mp3" />}
-            <div className="input-row"><input type="number" placeholder="Minutos perdidos" value={distractionMin} onChange={(e) => setDistractionMin(e.target.value)} /><button className="btn-icon-square" onClick={handleAddDistraction}>+</button></div>
+            {habits.map((h, i) => (
+              <div key={i} className="task-item">
+                <span>🌱 {h}</span>
+              </div>
+            ))}
           </div>
         )}
-        {tab === 'perfil' && <div className="card"><h3>{user.name}</h3><button className="btn-logout" onClick={handleLogout}>Cerrar sesión</button></div>}
+
+        {tab === 'estudio' && (
+          <>
+            <div className="card timer-container">
+              <h3>Temporizador Pomodoro</h3>
+              <div className="circle-timer">
+                <div className="timer-time">{formatSeconds(pomodoroTime)}</div>
+              </div>
+              <button className="btn-green-main" onClick={() => setIsPomoRunning(!isPomoRunning)}>
+                {isPomoRunning ? '⏸ Pausar' : '▶ Iniciar Pomodoro'}
+              </button>
+            </div>
+
+            <div className="card">
+              <h3>Tutor de IA</h3>
+              <input 
+                placeholder="Escribe un tema o pregunta..." 
+                value={studyTopic} 
+                onChange={(e) => setStudyTopic(e.target.value)}
+                style={{ marginBottom: '10px' }}
+              />
+              <button className="btn-green-main" onClick={() => askAI(studyTopic)} disabled={loadingAI}>
+                {loadingAI ? 'Consultando...' : 'Preguntar a la IA'}
+              </button>
+              {aiAnswer && (
+                <div style={{ marginTop: '15px', background: '#0d1117', padding: '12px', borderRadius: '8px', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>
+                  {aiAnswer}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {tab === 'enfoque' && (
+          <>
+            <div className="card timer-container">
+              <h3>Modo Enfoque</h3>
+              <div className="circle-timer">
+                <div className="timer-time">{formatSeconds(focusTime)}</div>
+              </div>
+              <button className="btn-green-main" onClick={() => setIsFocusRunning(!isFocusRunning)} style={{ marginBottom: '15px' }}>
+                {isFocusRunning ? '⏸ Detener Enfoque' : '🌙 Iniciar Enfoque'}
+              </button>
+
+              <h3>Sonido de Ambiente</h3>
+              <div className="tags-row" style={{ justifyContent: 'center' }}>
+                <button className={`tag-btn ${ambientSound === 'rain' ? 'active' : ''}`} onClick={() => setAmbientSound('rain')}>🌧️ Lluvia</button>
+                <button className={`tag-btn ${ambientSound === 'lofi' ? 'active' : ''}`} onClick={() => setAmbientSound('lofi')}>🎧 Lo-Fi</button>
+                <button className={`tag-btn ${ambientSound === 'none' ? 'active' : ''}`} onClick={() => setAmbientSound('none')}>Apagar</button>
+              </div>
+
+              {ambientSound === 'rain' && <audio autoPlay loop src="https://assets.mixkit.co/active_storage/sfx/2515/2515-preview.mp3" />}
+              {ambientSound === 'lofi' && <audio autoPlay loop src="https://assets.mixkit.co/active_storage/sfx/1253/1253-preview.mp3" />}
+            </div>
+
+            <div className="card">
+              <h3>Registro de Distracciones</h3>
+              <div className="tags-row">
+                {['Redes sociales', 'YouTube', 'Videojuegos', 'Otro'].map(cat => (
+                  <button 
+                    key={cat} 
+                    className={`tag-btn ${distractionCategory === cat ? 'active' : ''}`}
+                    onClick={() => setDistractionCategory(cat)}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              <div className="input-row">
+                <input 
+                  type="number" 
+                  placeholder="Minutos perdidos" 
+                  value={distractionMin} 
+                  onChange={(e) => setDistractionMin(e.target.value)} 
+                />
+                <button className="btn-icon-square" onClick={handleAddDistraction}>+</button>
+              </div>
+              {distractions.map((d, i) => (
+                <div key={i} style={{ fontSize: '0.85rem', padding: '4px 0' }}>
+                  ⚠️ {d.category}: {d.min} min
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {tab === 'perfil' && (
+          <div className="card">
+            <h3>Perfil del Usuario</h3>
+            <p style={{ margin: '8px 0', fontSize: '0.95rem' }}><strong>Nombre:</strong> {user.name}</p>
+            <p style={{ marginBottom: '16px', fontSize: '0.95rem', opacity: 0.8 }}><strong>Email:</strong> {user.email}</p>
+            <button className="btn-green-main" onClick={handleLogout} style={{ background: '#da3633' }}>Cerrar sesión</button>
+          </div>
+        )}
       </main>
+
       <nav className="bottom-nav">
-        <button className={`nav-item ${tab === 'inicio' ? 'active' : ''}`} onClick={() => setTab('inicio')}>🏠</button>
-        <button className={`nav-item ${tab === 'habitos' ? 'active' : ''}`} onClick={() => setTab('habitos')}>🍃</button>
-        <button className={`nav-item ${tab === 'estudio' ? 'active' : ''}`} onClick={() => setTab('estudio')}>📖</button>
-        <button className={`nav-item ${tab === 'enfoque' ? 'active' : ''}`} onClick={() => setTab('enfoque')}>🌙</button>
-        <button className={`nav-item ${tab === 'perfil' ? 'active' : ''}`} onClick={() => setTab('perfil')}>👤</button>
+        <button className={`nav-item ${tab === 'inicio' ? 'active' : ''}`} onClick={() => setTab('inicio')}>
+          🏠
+          <span>Inicio</span>
+        </button>
+        <button className={`nav-item ${tab === 'habitos' ? 'active' : ''}`} onClick={() => setTab('habitos')}>
+          🍃
+          <span>Hábitos</span>
+        </button>
+        <button className={`nav-item ${tab === 'estudio' ? 'active' : ''}`} onClick={() => setTab('estudio')}>
+          📖
+          <span>Estudio</span>
+        </button>
+        <button className={`nav-item ${tab === 'enfoque' ? 'active' : ''}`} onClick={() => setTab('enfoque')}>
+          🌙
+          <span>Enfoque</span>
+        </button>
+        <button className={`nav-item ${tab === 'perfil' ? 'active' : ''}`} onClick={() => setTab('perfil')}>
+          👤
+          <span>Perfil</span>
+        </button>
       </nav>
     </div>
   )
