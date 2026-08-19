@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
   --bg-main: #0a0a0a;
@@ -22,9 +22,113 @@ body {
   background-color: var(--bg-main);
   color: var(--text-main);
   min-height: 100vh;
-  padding-bottom: 80px;
 }
 
+/* LANDING / LOGIN SCREEN */
+.login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px 20px 40px;
+  max-width: 450px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.login-header-lang {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  width: 100%;
+}
+
+.lang-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.lang-btn.active {
+  background: #0d2e1c;
+  border-color: #00e676;
+  color: #00e676;
+  font-weight: 600;
+}
+
+.login-center-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.tree-illustration {
+  width: 120px;
+  height: 120px;
+  margin-bottom: 24px;
+}
+
+.brand-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.brand-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.login-bottom-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  margin-top: auto;
+}
+
+.login-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.btn-google-login {
+  background: var(--primary-green);
+  color: #000000;
+  border: none;
+  border-radius: 30px;
+  width: 100%;
+  padding: 16px;
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.btn-google-login:active {
+  opacity: 0.85;
+}
+
+.google-icon {
+  font-weight: 900;
+  font-size: 1.1rem;
+}
+
+/* APP CONTENT CONTAINER */
 .container {
   padding: 16px;
   max-width: 500px;
@@ -32,6 +136,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  padding-bottom: 90px;
 }
 
 .card {
@@ -114,16 +219,6 @@ body {
   font-weight: 600;
 }
 
-.chart-section {
-  margin-top: 10px;
-}
-
-.chart-label {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-}
-
 .days-grid {
   display: flex;
   justify-content: space-between;
@@ -135,21 +230,6 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-}
-
-.bar-line {
-  width: 35px;
-  height: 4px;
-  border-radius: 2px;
-  background: #222;
-}
-
-.bar-line.green { background: var(--primary-green); }
-.bar-line.blue { background: #3b82f6; }
-
-.day-text {
-  font-size: 0.75rem;
-  color: var(--text-muted);
 }
 
 .streak-hero {
@@ -301,6 +381,7 @@ input, textarea {
   display: flex;
   justify-content: space-around;
   align-items: center;
+  z-index: 100;
 }
 
 .nav-item {
@@ -317,4 +398,15 @@ input, textarea {
 
 .nav-item.active {
   color: var(--primary-green);
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 200;
 }

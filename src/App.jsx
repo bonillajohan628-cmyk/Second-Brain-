@@ -2,86 +2,75 @@ import React, { useState, useEffect } from 'react'
 import './App.css'
 
 export default function App() {
-  // --- AUTENTICACIÓN LOCAL ---
+  const [lang, setLang] = useState('ES')
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [loginName, setLoginName] = useState('')
+  const [loginEmail, setLoginEmail] = useState('')
+
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('sb_user')
     return saved ? JSON.parse(saved) : null
   })
-  const [loginName, setLoginName] = useState('')
-  const [loginEmail, setLoginEmail] = useState('')
 
-  // --- NAVEGACIÓN ---
   const [tab, setTab] = useState('inicio')
-  const [lang, setLang] = useState('ES')
-
-  // --- ESTADOS DE DATOS ---
-  const [streak, setStreak] = useState(1)
+  const [streak] = useState(1)
   const [studyMin, setStudyMin] = useState(0)
   const [focusLevel, setFocusLevel] = useState(100)
-  
-  const [tasks, setTasks] = useState([
-    { id: 1, text: 'Completar sesión de estudio', done: false }
-  ])
-  const [newTask, setNewTask] = useState('')
 
+  const [tasks, setTasks] = useState([{ id: 1, text: 'Completar sesión de estudio', done: false }])
+  const [newTask, setNewTask] = useState('')
   const [habits, setHabits] = useState(['Leer 20 min', 'Hacer ejercicio'])
   const [newHabit, setNewHabit] = useState('')
 
-  // --- TEMPORIZADOR POMODORO ---
   const [pomodoroTime, setPomodoroTime] = useState(25 * 60)
   const [isPomoRunning, setIsPomoRunning] = useState(false)
   const [pomoSubject, setPomoSubject] = useState('')
 
-  // --- TEMPORIZADOR ENFOQUE ---
   const [focusTime, setFocusTime] = useState(0)
   const [isFocusRunning, setIsFocusRunning] = useState(false)
   const [distractions, setDistractions] = useState([])
   const [distractionMin, setDistractionMin] = useState('')
   const [distractionCategory, setDistractionCategory] = useState('Redes sociales')
 
-  // --- MEMORIA E IA ---
   const [memories, setMemories] = useState([])
   const [memoryType, setMemoryType] = useState('Meta')
   const [memoryText, setMemoryText] = useState('')
-  
+
   const [studyTopic, setStudyTopic] = useState('')
   const [aiQuestion, setAiQuestion] = useState('')
   const [aiAnswer, setAiAnswer] = useState('')
   const [loadingAI, setLoadingAI] = useState(false)
 
-  // Timer Pomodoro Effect
   useEffect(() => {
     let timer = null
     if (isPomoRunning && pomodoroTime > 0) {
-      timer = setInterval(() => {
-        setPomodoroTime((prev) => prev - 1)
-      }, 1000)
+      timer = setInterval(() => setPomodoroTime((prev) => prev - 1), 1000)
     } else if (pomodoroTime === 0 && isPomoRunning) {
       setIsPomoRunning(false)
       setStudyMin((prev) => prev + 25)
-      alert('¡Tiempo de Pomodoro finalizado! Buen trabajo.')
+      alert('¡Pomodoro completado!')
     }
     return () => clearInterval(timer)
   }, [isPomoRunning, pomodoroTime])
 
-  // Timer Enfoque Effect
   useEffect(() => {
     let timer = null
     if (isFocusRunning) {
-      timer = setInterval(() => {
-        setFocusTime((prev) => prev + 1)
-      }, 1000)
+      timer = setInterval(() => setFocusTime((prev) => prev + 1), 1000)
     }
     return () => clearInterval(timer)
   }, [isFocusRunning])
 
-  // --- HANDLERS ---
-  const handleLogin = (e) => {
+  const handleGoogleLoginSubmit = (e) => {
     e.preventDefault()
     if (!loginName.trim()) return
-    const userData = { name: loginName, email: loginEmail || `${loginName.toLowerCase()}@local.com` }
+    const userData = {
+      name: loginName,
+      email: loginEmail || `${loginName.toLowerCase().replace(/\s+/g, '')}@gmail.com`
+    }
     setUser(userData)
     localStorage.setItem('sb_user', JSON.stringify(userData))
+    setShowAuthModal(false)
   }
 
   const handleLogout = () => {
@@ -128,7 +117,7 @@ export default function App() {
       const text = await res.text()
       setAiAnswer(text)
     } catch {
-      setAiAnswer('Error al conectar con la IA. Intenta de nuevo.')
+      setAiAnswer('Error al conectar con la IA.')
     } finally {
       setLoadingAI(false)
     }
@@ -140,28 +129,68 @@ export default function App() {
     return `${m}:${s}`
   }
 
-  // --- VISTA DE LOGIN SI NO HAY USUARIO ---
+  // --- VISTA DE LOGIN EMERGENT ---
   if (!user) {
     return (
-      <div className="container" style={{ marginTop: '50px' }}>
-        <div className="card" style={{ textAlign: 'center' }}>
-          <h2 style={{ marginBottom: '15px' }}>Iniciar Sesión</h2>
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <input 
-              placeholder="Tu nombre" 
-              value={loginName} 
-              onChange={(e) => setLoginName(e.target.value)} 
-              required 
-            />
-            <input 
-              placeholder="Correo electrónico" 
-              type="email"
-              value={loginEmail} 
-              onChange={(e) => setLoginEmail(e.target.value)} 
-            />
-            <button type="submit" className="btn-green-main">Ingresar</button>
-          </form>
+      <div className="login-wrapper">
+        <div className="login-header-lang">
+          <button className={`lang-btn ${lang === 'ES' ? 'active' : ''}`} onClick={() => setLang('ES')}>ES</button>
+          <button className={`lang-btn ${lang === 'EN' ? 'active' : ''}`} onClick={() => setLang('EN')}>EN</button>
         </div>
+
+        <div className="login-center-content">
+          <svg className="tree-illustration" viewBox="0 0 100 100" fill="none">
+            <ellipse cx="50" cy="50" rx="38" ry="34" fill="#00E676" opacity="0.3" />
+            <ellipse cx="40" cy="42" rx="28" ry="26" fill="#00E676" opacity="0.6" />
+            <ellipse cx="60" cy="42" rx="28" ry="26" fill="#00E676" opacity="0.6" />
+            <ellipse cx="50" cy="35" rx="28" ry="26" fill="#00E676" />
+            <path d="M48 65 H52 V82 H48 Z" fill="#052E16" />
+            <ellipse cx="50" cy="83" rx="24" ry="3" fill="#052E16" />
+          </svg>
+
+          <h1 className="brand-title">Second Brain</h1>
+          <p className="brand-subtitle">
+            {lang === 'ES' ? 'Tu segundo cerebro, tranquilo y honesto.' : 'Your second brain, calm and honest.'}
+          </p>
+        </div>
+
+        <div className="login-bottom-section">
+          <span className="login-hint">
+            {lang === 'ES' ? 'Inicia sesión para comenzar' : 'Sign in to get started'}
+          </span>
+          <button className="btn-google-login" onClick={() => setShowAuthModal(true)}>
+            <span className="google-icon">G</span>
+            {lang === 'ES' ? 'Continuar con Google' : 'Continue with Google'}
+          </button>
+        </div>
+
+        {showAuthModal && (
+          <div className="modal-overlay">
+            <div className="card" style={{ width: '100%', maxWidth: '360px' }}>
+              <h3 className="card-title" style={{ textAlign: 'center', marginBottom: '16px' }}>Cuenta de Google</h3>
+              <form onSubmit={handleGoogleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <input 
+                  placeholder="Nombre de usuario" 
+                  value={loginName} 
+                  onChange={(e) => setLoginName(e.target.value)} 
+                  required 
+                />
+                <input 
+                  placeholder="Correo electrónico (@gmail.com)" 
+                  type="email"
+                  value={loginEmail} 
+                  onChange={(e) => setLoginEmail(e.target.value)} 
+                />
+                <button type="submit" className="btn-green-main" style={{ width: '100%' }}>
+                  Ingresar a Second Brain
+                </button>
+                <button type="button" className="btn-logout" style={{ width: '100%', marginTop: '4px' }} onClick={() => setShowAuthModal(false)}>
+                  Cancelar
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -169,7 +198,6 @@ export default function App() {
   return (
     <div>
       <main className="container">
-        {/* INICIO */}
         {tab === 'inicio' && (
           <>
             <div className="card streak-hero">
@@ -225,7 +253,6 @@ export default function App() {
           </>
         )}
 
-        {/* HÁBITOS */}
         {tab === 'habitos' && (
           <>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Hábitos</h2>
@@ -253,7 +280,6 @@ export default function App() {
           </>
         )}
 
-        {/* ESTUDIO */}
         {tab === 'estudio' && (
           <>
             <div className="card timer-container">
@@ -307,7 +333,6 @@ export default function App() {
           </>
         )}
 
-        {/* ENFOQUE */}
         {tab === 'enfoque' && (
           <>
             <div className="card timer-container">
@@ -355,7 +380,6 @@ export default function App() {
           </>
         )}
 
-        {/* PERFIL */}
         {tab === 'perfil' && (
           <>
             <div className="card profile-header">
