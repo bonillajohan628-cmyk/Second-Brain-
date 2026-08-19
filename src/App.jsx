@@ -111,13 +111,19 @@ export default function App() {
   const askAI = async (promptText) => {
     if (!promptText.trim()) return
     setLoadingAI(true)
-    setAiAnswer('Pensando...')
+    setAiAnswer('⚡ Pensando...')
+    
     try {
-      const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(promptText)}?model=openai`)
+      // Usamos el endpoint GET de Pollinations sin autenticación requerida
+      const formattedPrompt = `Eres un tutor educativo claro y directo. Responde brevemente en español a: ${promptText}`
+      const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(formattedPrompt)}`)
+      
+      if (!res.ok) throw new Error('Error en la solicitud')
+      
       const text = await res.text()
       setAiAnswer(text)
     } catch {
-      setAiAnswer('Error al conectar con la IA.')
+      setAiAnswer('Error de conexión. Intenta de nuevo.')
     } finally {
       setLoadingAI(false)
     }
@@ -129,7 +135,6 @@ export default function App() {
     return `${m}:${s}`
   }
 
-  // --- VISTA DE LOGIN EMERGENT ---
   if (!user) {
     return (
       <div className="login-wrapper">
@@ -308,7 +313,7 @@ export default function App() {
                 Asistente de Estudio IA
               </h3>
               <input 
-                placeholder="Tema a consultar (Ej: Tema de examen)" 
+                placeholder="Tema a consultar (Ej: Teoría de Pitágoras)" 
                 value={studyTopic}
                 onChange={(e) => setStudyTopic(e.target.value)}
                 style={{ marginBottom: '12px' }} 
