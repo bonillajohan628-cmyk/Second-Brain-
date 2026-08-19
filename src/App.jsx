@@ -2,83 +2,70 @@ import React, { useState, useEffect } from 'react'
 import './App.css'
 
 export default function App() {
-  const [lang, setLang] = useState('ES')
-  const [theme, setTheme] = useState('dark')
-  const [showAuthModal, setShowAuthModal] = useState(false)
-  const [loginName, setLoginName] = useState('')
-  const [loginEmail, setLoginEmail] = useState('')
-
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('sb_user')
     return saved ? JSON.parse(saved) : null
   })
 
   const [tab, setTab] = useState('inicio')
-  const [streak] = useState(1)
-  const [studyMin, setStudyMin] = useState(0)
+  const [lang, setLang] = useState('ES')
 
-  const [tasks, setTasks] = useState([{ id: 1, text: 'Completar sesión de estudio', done: false }])
+  // Datos Inicio & Tareas
+  const [streak] = useState(0)
+  const [tasks, setTasks] = useState([{ id: 1, text: 'Comer', done: false }])
   const [newTask, setNewTask] = useState('')
 
-  const [habits, setHabits] = useState(['Leer 20 min', 'Hacer ejercicio'])
-  const [newHabit, setNewHabit] = useState('')
-
-  const [pomodoroTime, setPomodoroTime] = useState(25 * 60)
-  const [isPomoRunning, setIsPomoRunning] = useState(false)
-  const [pomoSubject, setPomoSubject] = useState('')
-
-  const [focusTime, setFocusTime] = useState(0)
-  const [isFocusRunning, setIsFocusRunning] = useState(false)
-  const [distractions, setDistractions] = useState([])
-  const [distractionMin, setDistractionMin] = useState('')
-  const [distractionCategory, setDistractionCategory] = useState('Redes sociales')
-
+  // Memoria
   const [memories, setMemories] = useState([])
   const [memoryType, setMemoryType] = useState('Meta')
   const [memoryText, setMemoryText] = useState('')
-  const [reminderMinutes, setReminderMinutes] = useState('')
 
-  const [studyTopic, setStudyTopic] = useState('')
-  const [aiAnswer, setAiAnswer] = useState('')
+  // Hábitos
+  const [habits, setHabits] = useState([])
+  const [newHabit, setNewHabit] = useState('')
+
+  // Estudio & IA
+  const [pomoTime, setPomoTime] = useState(25 * 60)
+  const [isPomoRunning, setIsPomoRunning] = useState(false)
+  const [pomoSubject, setPomoSubject] = useState('')
+  const [aiTopic, setAiTopic] = useState('')
+  const [aiPromptType, setAiPromptType] = useState('Resumen rápido')
+  const [aiResponse, setAiResponse] = useState('')
   const [loadingAI, setLoadingAI] = useState(false)
+
+  // Enfoque & Sonido
+  const [focusTime, setFocusTime] = useState(0)
+  const [isFocusRunning, setIsFocusRunning] = useState(false)
+  const [distractions, setDistractions] = useState([])
+  const [distractionCategory, setDistractionCategory] = useState('Redes sociales')
+  const [distractionMin, setDistractionMin] = useState('')
   const [ambientSound, setAmbientSound] = useState('none')
 
+  // Timer Pomodoro
   useEffect(() => {
     let timer = null
-    if (isPomoRunning && pomodoroTime > 0) {
-      timer = setInterval(() => setPomodoroTime((prev) => prev - 1), 1000)
-    } else if (pomodoroTime === 0 && isPomoRunning) {
+    if (isPomoRunning && pomoTime > 0) {
+      timer = setInterval(() => setPomoTime(prev => prev - 1), 1000)
+    } else if (pomoTime === 0 && isPomoRunning) {
       setIsPomoRunning(false)
-      setStudyMin((prev) => prev + 25)
-      alert('¡Pomodoro completado!')
+      alert('¡Tiempo de Pomodoro finalizado!')
     }
     return () => clearInterval(timer)
-  }, [isPomoRunning, pomodoroTime])
+  }, [isPomoRunning, pomoTime])
 
+  // Timer Enfoque
   useEffect(() => {
     let timer = null
     if (isFocusRunning) {
-      timer = setInterval(() => setFocusTime((prev) => prev + 1), 1000)
+      timer = setInterval(() => setFocusTime(prev => prev + 1), 1000)
     }
     return () => clearInterval(timer)
   }, [isFocusRunning])
 
-  const toggleTheme = () => {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark'
-    setTheme(nextTheme)
-    document.body.classList.toggle('light-mode', nextTheme === 'light')
-  }
-
-  const handleGoogleLoginSubmit = (e) => {
-    e.preventDefault()
-    if (!loginName.trim()) return
-    const userData = {
-      name: loginName,
-      email: loginEmail || `${loginName.toLowerCase().replace(/\s+/g, '')}@gmail.com`
-    }
-    setUser(userData)
-    localStorage.setItem('sb_user', JSON.stringify(userData))
-    setShowAuthModal(false)
+  const handleLogin = () => {
+    const fakeUser = { name: 'Johan', email: 'johanpro1106@gmail.com' }
+    setUser(fakeUser)
+    localStorage.setItem('sb_user', JSON.stringify(fakeUser))
   }
 
   const handleLogout = () => {
@@ -96,6 +83,12 @@ export default function App() {
     setTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t))
   }
 
+  const handleAddMemory = () => {
+    if (!memoryText.trim()) return
+    setMemories([...memories, { type: memoryType, text: memoryText }])
+    setMemoryText('')
+  }
+
   const handleAddHabit = () => {
     if (!newHabit.trim()) return
     setHabits([...habits, newHabit])
@@ -104,254 +97,332 @@ export default function App() {
 
   const handleAddDistraction = () => {
     if (!distractionMin) return
-    setDistractions([...distractions, { category: distractionCategory, min: distractionMin }])
+    setDistractions([...distractions, { category: distractionCategory, min: Number(distractionMin) }])
     setDistractionMin('')
   }
 
-  const handleAddMemory = () => {
-    if (!memoryText.trim()) return
-    setMemories([...memories, { type: memoryType, text: memoryText }])
-    setMemoryText('')
-  }
-
-  const askAI = async (promptText) => {
-    if (!promptText || !promptText.trim()) return
+  const askAI = async (customPrompt) => {
+    const query = customPrompt || `${aiPromptType}: ${aiTopic}`
+    if (!query.trim()) return
     setLoadingAI(true)
-    setAiAnswer('⚡ Consultando...')
+    setAiResponse('⚡ Consultando...')
     try {
-      const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(promptText)}?model=mistral`)
+      const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(query)}?model=mistral`)
       if (res.ok) {
-        setAiAnswer(await res.text())
+        setAiResponse(await res.text())
       } else {
-        setAiAnswer('Ocurrió un error con el servicio de IA.')
+        setAiResponse('Error al obtener respuesta de la IA.')
       }
     } catch (e) {
-      setAiAnswer('Error de conexión con la IA.')
+      setAiResponse('Error de conexión.')
     }
     setLoadingAI(false)
   }
 
-  const formatSeconds = (sec) => {
+  const formatMinSec = (sec) => {
     const m = Math.floor(sec / 60).toString().padStart(2, '0')
     const s = (sec % 60).toString().padStart(2, '0')
     return `${m}:${s}`
   }
 
+  // Vista de Inicio de Sesión
   if (!user) {
     return (
-      <div className="container" style={{ paddingTop: '60px', textAlign: 'center' }}>
-        <div className="card">
-          <h1 style={{ marginBottom: '10px', color: '#58a6ff' }}>Second Brain</h1>
-          <p style={{ marginBottom: '20px', fontSize: '0.9rem' }}>Tu espacio de organización personal.</p>
-          <button className="btn-green-main" onClick={() => setShowAuthModal(true)}>Continuar con Google</button>
+      <div className="app-viewport">
+        <div className="login-screen">
+          <div className="tree-logo">🌳</div>
+          <h1 className="login-title">Second Brain</h1>
+          <p className="login-sub">Tu segundo cerebro, tranquilo y honesto.</p>
+          
+          <p style={{ fontSize: '0.8rem', color: '#8b949e', marginBottom: '12px' }}>Inicia sesión para comenzar</p>
+          <button className="btn-red-primary" onClick={handleLogin}>
+            <span>G</span> Continuar con Google
+          </button>
         </div>
-        {showAuthModal && (
-          <div className="card" style={{ marginTop: '20px' }}>
-            <h3>Ingresar datos</h3>
-            <form onSubmit={handleGoogleLoginSubmit}>
-              <input placeholder="Nombre" value={loginName} onChange={(e) => setLoginName(e.target.value)} required style={{ marginBottom: '10px' }} />
-              <button type="submit" className="btn-green-main">Ingresar</button>
-            </form>
-          </div>
-        )}
       </div>
     )
   }
 
   return (
-    <div>
-      <header className="top-header">
-        <h2>Second Brain</h2>
-        <button className="theme-toggle-btn" onClick={toggleTheme}>
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
-      </header>
+    <div className="app-viewport">
+      {/* VISTA INICIO */}
+      {tab === 'inicio' && (
+        <>
+          <div className="card streak-box">
+            <div className="streak-val">{streak}</div>
+            <div className="streak-lbl">DÍAS DE RACHA</div>
+            <p style={{ fontSize: '0.8rem', color: '#8b949e', marginTop: '8px' }}>Tu árbol crece contigo</p>
+          </div>
 
-      <main className="container">
-        {tab === 'inicio' && (
-          <>
-            <div className="card streak-hero">
-              <div className="streak-number">{streak}</div>
-              <div className="streak-sub">DÍAS DE RACHA</div>
+          <div className="card" style={{ background: '#131519' }}>
+            <p style={{ fontSize: '0.85rem', color: '#c9d1d9' }}>
+              ✨ Hoy está en blanco total: cero racha, cero tareas, cero minutos. Buen momento para empezar de cero, sin drama.
+            </p>
+          </div>
+
+          <div className="grid-2">
+            <div className="metric-card">
+              <div className="metric-val">📖 0 min</div>
+              <div className="metric-lbl">Estudio hoy</div>
             </div>
+            <div className="metric-card">
+              <div className="metric-val">⚡ 0%</div>
+              <div className="metric-lbl">Nivel de enfoque</div>
+            </div>
+          </div>
 
-            <div className="card">
-              <h3>Tareas pendientes</h3>
-              <div className="input-row">
-                <input placeholder="Añadir tarea" value={newTask} onChange={(e) => setNewTask(e.target.value)} />
-                <button className="btn-icon-square" onClick={handleAddTask}>+</button>
-              </div>
-              {tasks.map(t => (
-                <div key={t.id} className={`task-item ${t.done ? 'done' : ''}`}>
-                  <input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id)} />
-                  <span>{t.text}</span>
+          <div className="card">
+            <div className="card-title">Tareas pendientes</div>
+            <div className="input-group" style={{ marginBottom: '12px' }}>
+              <input 
+                placeholder="Añadir tarea" 
+                value={newTask} 
+                onChange={(e) => setNewTask(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
+              />
+              <button className="btn-inline-add" onClick={handleAddTask}>+</button>
+            </div>
+            {tasks.map(t => (
+              <div key={t.id} className={`task-row ${t.done ? 'done' : ''}`}>
+                <div className={`custom-checkbox ${t.done ? 'checked' : ''}`} onClick={() => toggleTask(t.id)}>
+                  {t.done && <span style={{ color: '#fff', fontSize: '10px' }}>✓</span>}
                 </div>
+                <span>{t.text}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            <div className="card-title">Memoria inteligente</div>
+            <p style={{ fontSize: '0.8rem', color: '#8b949e', marginBottom: '12px' }}>
+              Guarda metas, hábitos, materias difíciles y pensamientos. La IA los recuerda.
+            </p>
+            <div className="chips-row">
+              {['Meta', 'Hábito', 'Materia difícil', 'Horario', 'Pensamiento'].map(type => (
+                <button 
+                  key={type} 
+                  className={`chip ${memoryType === type ? 'active' : ''}`}
+                  onClick={() => setMemoryType(type)}
+                >
+                  {type}
+                </button>
               ))}
             </div>
-
-            <div className="card">
-              <h3>Memoria / Recordatorios</h3>
-              <div className="tags-row">
-                {['Meta', 'Idea', 'Proyecto', 'Nota'].map(type => (
-                  <button 
-                    key={type} 
-                    className={`tag-btn ${memoryType === type ? 'active' : ''}`}
-                    onClick={() => setMemoryType(type)}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
+            <div className="input-group" style={{ marginBottom: '12px' }}>
               <input 
-                placeholder="Escribe lo que quieres recordar..." 
+                placeholder="Escribe algo importante..." 
                 value={memoryText} 
-                onChange={(e) => setMemoryText(e.target.value)}
-                style={{ marginBottom: '10px' }}
+                onChange={(e) => setMemoryText(e.target.value)} 
               />
-              <button className="btn-green-main" onClick={handleAddMemory}>Guardar Memoria</button>
-              
-              {memories.length > 0 && (
-                <div style={{ marginTop: '15px' }}>
-                  {memories.map((m, i) => (
-                    <div key={i} style={{ fontSize: '0.85rem', padding: '6px 0', borderBottom: '1px solid #21262d' }}>
-                      <strong>[{m.type}]</strong> {m.text}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <button className="btn-inline-add" onClick={handleAddMemory}>+</button>
             </div>
-          </>
-        )}
+            {memories.length === 0 ? (
+              <p style={{ fontSize: '0.8rem', color: '#6e7681', textAlign: 'center' }}>Aún no has guardado nada. Empieza con una meta pequeña.</p>
+            ) : (
+              memories.map((m, i) => (
+                <div key={i} style={{ fontSize: '0.85rem', padding: '6px 0', borderBottom: '1px solid #20232a' }}>
+                  <strong>[{m.type}]</strong> {m.text}
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
 
-        {tab === 'habitos' && (
+      {/* VISTA HÁBITOS */}
+      {tab === 'habitos' && (
+        <>
+          <h2 style={{ fontSize: '1.4rem', marginBottom: '16px' }}>Hábitos</h2>
+          <div className="card streak-box">
+            <div style={{ fontSize: '3rem' }}>🌳</div>
+            <p style={{ fontSize: '0.85rem', color: '#8b949e', marginTop: '8px' }}>Tu árbol crece contigo</p>
+          </div>
+
           <div className="card">
-            <h3>Mis Hábitos</h3>
-            <div className="input-row">
-              <input placeholder="Nuevo hábito" value={newHabit} onChange={(e) => setNewHabit(e.target.value)} />
-              <button className="btn-icon-square" onClick={handleAddHabit}>+</button>
+            <div className="card-title">Progreso semanal</div>
+            <div className="input-group" style={{ marginTop: '12px' }}>
+              <input 
+                placeholder="Ej: Leer 20 min" 
+                value={newHabit} 
+                onChange={(e) => setNewHabit(e.target.value)} 
+              />
+              <button className="btn-inline-add" onClick={handleAddHabit}>+</button>
             </div>
             {habits.map((h, i) => (
-              <div key={i} className="task-item">
+              <div key={i} className="task-row">
                 <span>🌱 {h}</span>
               </div>
             ))}
           </div>
-        )}
+        </>
+      )}
 
-        {tab === 'estudio' && (
-          <>
-            <div className="card timer-container">
-              <h3>Temporizador Pomodoro</h3>
-              <div className="circle-timer">
-                <div className="timer-time">{formatSeconds(pomodoroTime)}</div>
+      {/* VISTA ESTUDIO */}
+      {tab === 'estudio' && (
+        <>
+          <div className="card">
+            <div className="timer-circle-container">
+              <div className="timer-circle">
+                <div className="timer-digits">{formatMinSec(pomoTime)}</div>
+                <div className="timer-label">POMODORO</div>
               </div>
-              <button className="btn-green-main" onClick={() => setIsPomoRunning(!isPomoRunning)}>
-                {isPomoRunning ? '⏸ Pausar' : '▶ Iniciar Pomodoro'}
-              </button>
             </div>
+            <input 
+              placeholder="Ej: Matemáticas" 
+              value={pomoSubject} 
+              onChange={(e) => setPomoSubject(e.target.value)} 
+              style={{ background: '#0f1013', border: '1px solid #262930', borderRadius: '12px', padding: '12px', color: '#fff', width: '100%', marginBottom: '12px' }}
+            />
+            <button className="btn-red-primary" onClick={() => setIsPomoRunning(!isPomoRunning)}>
+              {isPomoRunning ? '⏸ Pausar' : '▶ Iniciar'}
+            </button>
+          </div>
 
-            <div className="card">
-              <h3>Tutor de IA</h3>
-              <input 
-                placeholder="Escribe un tema o pregunta..." 
-                value={studyTopic} 
-                onChange={(e) => setStudyTopic(e.target.value)}
-                style={{ marginBottom: '10px' }}
-              />
-              <button className="btn-green-main" onClick={() => askAI(studyTopic)} disabled={loadingAI}>
-                {loadingAI ? 'Consultando...' : 'Preguntar a la IA'}
-              </button>
-              {aiAnswer && (
-                <div style={{ marginTop: '15px', background: '#0d1117', padding: '12px', borderRadius: '8px', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>
-                  {aiAnswer}
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {tab === 'enfoque' && (
-          <>
-            <div className="card timer-container">
-              <h3>Modo Enfoque</h3>
-              <div className="circle-timer">
-                <div className="timer-time">{formatSeconds(focusTime)}</div>
-              </div>
-              <button className="btn-green-main" onClick={() => setIsFocusRunning(!isFocusRunning)} style={{ marginBottom: '15px' }}>
-                {isFocusRunning ? '⏸ Detener Enfoque' : '🌙 Iniciar Enfoque'}
-              </button>
-
-              <h3>Sonido de Ambiente</h3>
-              <div className="tags-row" style={{ justifyContent: 'center' }}>
-                <button className={`tag-btn ${ambientSound === 'rain' ? 'active' : ''}`} onClick={() => setAmbientSound('rain')}>🌧️ Lluvia</button>
-                <button className={`tag-btn ${ambientSound === 'lofi' ? 'active' : ''}`} onClick={() => setAmbientSound('lofi')}>🎧 Lo-Fi</button>
-                <button className={`tag-btn ${ambientSound === 'none' ? 'active' : ''}`} onClick={() => setAmbientSound('none')}>Apagar</button>
-              </div>
-
-              {ambientSound === 'rain' && <audio autoPlay loop src="https://assets.mixkit.co/active_storage/sfx/2515/2515-preview.mp3" />}
-              {ambientSound === 'lofi' && <audio autoPlay loop src="https://assets.mixkit.co/active_storage/sfx/1253/1253-preview.mp3" />}
-            </div>
-
-            <div className="card">
-              <h3>Registro de Distracciones</h3>
-              <div className="tags-row">
-                {['Redes sociales', 'YouTube', 'Videojuegos', 'Otro'].map(cat => (
-                  <button 
-                    key={cat} 
-                    className={`tag-btn ${distractionCategory === cat ? 'active' : ''}`}
-                    onClick={() => setDistractionCategory(cat)}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-              <div className="input-row">
-                <input 
-                  type="number" 
-                  placeholder="Minutos perdidos" 
-                  value={distractionMin} 
-                  onChange={(e) => setDistractionMin(e.target.value)} 
-                />
-                <button className="btn-icon-square" onClick={handleAddDistraction}>+</button>
-              </div>
-              {distractions.map((d, i) => (
-                <div key={i} style={{ fontSize: '0.85rem', padding: '4px 0' }}>
-                  ⚠️ {d.category}: {d.min} min
-                </div>
+          <div className="card">
+            <div className="card-title">Resumen rápido · Explicación sencilla · Preguntas tipo examen</div>
+            <input 
+              placeholder="Ej: Ecuaciones lineales" 
+              value={aiTopic} 
+              onChange={(e) => setAiTopic(e.target.value)} 
+              style={{ background: '#0f1013', border: '1px solid #262930', borderRadius: '12px', padding: '12px', color: '#fff', width: '100%', marginBottom: '12px' }}
+            />
+            <div className="chips-row">
+              {[
+                { label: '📄 Resumen rápido', value: 'Resumen rápido' },
+                { label: '💡 Explicación sencilla', value: 'Explicación sencilla' },
+                { label: '❓ Preguntas tipo examen', value: 'Preguntas tipo examen' }
+              ].map(opt => (
+                <button 
+                  key={opt.value} 
+                  className={`chip ${aiPromptType === opt.value ? 'active' : ''}`}
+                  onClick={() => { setAiPromptType(opt.value); askAI(`${opt.value} de ${aiTopic}`); }}
+                >
+                  {opt.label}
+                </button>
               ))}
             </div>
-          </>
-        )}
-
-        {tab === 'perfil' && (
-          <div className="card">
-            <h3>Perfil del Usuario</h3>
-            <p style={{ margin: '8px 0', fontSize: '0.95rem' }}><strong>Nombre:</strong> {user.name}</p>
-            <p style={{ marginBottom: '16px', fontSize: '0.95rem', opacity: 0.8 }}><strong>Email:</strong> {user.email}</p>
-            <button className="btn-green-main" onClick={handleLogout} style={{ background: '#da3633' }}>Cerrar sesión</button>
+            {aiResponse && (
+              <div style={{ marginTop: '12px', background: '#0f1013', padding: '12px', borderRadius: '12px', fontSize: '0.85rem', whiteSpace: 'pre-wrap' }}>
+                {aiResponse}
+              </div>
+            )}
           </div>
-        )}
-      </main>
+        </>
+      )}
 
+      {/* VISTA ENFOQUE */}
+      {tab === 'enfoque' && (
+        <>
+          <div className="card">
+            <div className="timer-circle-container">
+              <div className="timer-circle" style={{ borderColor: '#484f58' }}>
+                <div className="timer-digits">{formatMinSec(focusTime)}</div>
+                <div className="timer-label">TIEMPO</div>
+              </div>
+            </div>
+            <button className="btn-red-primary" onClick={() => setIsFocusRunning(!isFocusRunning)} style={{ marginBottom: '16px' }}>
+              {isFocusRunning ? '⏸ Detener' : '🌙 Iniciar'}
+            </button>
+
+            <div className="card-title" style={{ fontSize: '0.9rem' }}>Sonido de ambiente</div>
+            <div className="chips-row">
+              <button className={`chip ${ambientSound === 'rain' ? 'active' : ''}`} onClick={() => setAmbientSound('rain')}>🌧️ Lluvia</button>
+              <button className={`chip ${ambientSound === 'lofi' ? 'active' : ''}`} onClick={() => setAmbientSound('lofi')}>🎧 Lo-Fi</button>
+              <button className={`chip ${ambientSound === 'none' ? 'active' : ''}`} onClick={() => setAmbientSound('none')}>Apagar</button>
+            </div>
+            {ambientSound === 'rain' && <audio autoPlay loop src="https://assets.mixkit.co/active_storage/sfx/2515/2515-preview.mp3" />}
+            {ambientSound === 'lofi' && <audio autoPlay loop src="https://assets.mixkit.co/active_storage/sfx/1253/1253-preview.mp3" />}
+          </div>
+
+          <div className="card">
+            <div className="card-title">Distracciones · Registrar distracción</div>
+            <div className="input-group" style={{ marginBottom: '12px' }}>
+              <input 
+                type="number" 
+                placeholder="min (ej: 15)" 
+                value={distractionMin} 
+                onChange={(e) => setDistractionMin(e.target.value)} 
+              />
+              <button className="btn-inline-add" onClick={handleAddDistraction}>+</button>
+            </div>
+            <div className="chips-row">
+              {['Redes sociales', 'YouTube', 'Videojuegos', 'Otro'].map(cat => (
+                <button 
+                  key={cat} 
+                  className={`chip ${distractionCategory === cat ? 'active' : ''}`}
+                  onClick={() => setDistractionCategory(cat)}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <div style={{ marginTop: '12px', fontSize: '1.2rem', fontWeight: 'bold', color: '#ff6b6b' }}>
+              {distractions.reduce((acc, curr) => acc + curr.min, 0)} min
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#8b949e' }}>Todas las apps</div>
+          </div>
+        </>
+      )}
+
+      {/* VISTA PERFIL */}
+      {tab === 'perfil' && (
+        <>
+          <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className="tree-logo" style={{ width: '45px', height: '45px', fontSize: '1.2rem', margin: 0 }}>J</div>
+              <div>
+                <div style={{ fontWeight: 'bold' }}>{user.name}</div>
+                <div style={{ fontSize: '0.75rem', color: '#8b949e' }}>{user.email}</div>
+              </div>
+            </div>
+            <button 
+              onClick={handleLogout} 
+              style={{ background: '#20232a', border: '1px solid #262930', color: '#f85149', padding: '8px 12px', borderRadius: '8px', fontSize: '0.8rem', cursor: 'pointer' }}
+            >
+              🚪 Cerrar sesión
+            </button>
+          </div>
+
+          <div className="card">
+            <div className="card-title">Idioma</div>
+            <div className="chips-row">
+              <button className={`chip ${lang === 'ES' ? 'active' : ''}`} onClick={() => setLang('ES')}>ES</button>
+              <button className={`chip ${lang === 'EN' ? 'active' : ''}`} onClick={() => setLang('EN')}>EN</button>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-title">Análisis semanal</div>
+            <div style={{ fontSize: '0.8rem', color: '#8b949e', marginBottom: '8px' }}>Estudio (min)</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #ff6b6b' }}>
+              {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, i) => (
+                <span key={i} style={{ fontSize: '0.75rem', color: '#8b949e' }}>{day}</span>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* NAV INFERIOR EXACTO */}
       <nav className="bottom-nav">
-        <button className={`nav-item ${tab === 'inicio' ? 'active' : ''}`} onClick={() => setTab('inicio')}>
-          🏠
+        <button className={`nav-btn ${tab === 'inicio' ? 'active' : ''}`} onClick={() => setTab('inicio')}>
+          <span>🏠</span>
           <span>Inicio</span>
         </button>
-        <button className={`nav-item ${tab === 'habitos' ? 'active' : ''}`} onClick={() => setTab('habitos')}>
-          🍃
+        <button className={`nav-btn ${tab === 'habitos' ? 'active' : ''}`} onClick={() => setTab('habitos')}>
+          <span>🍃</span>
           <span>Hábitos</span>
         </button>
-        <button className={`nav-item ${tab === 'estudio' ? 'active' : ''}`} onClick={() => setTab('estudio')}>
-          📖
+        <button className={`nav-btn ${tab === 'estudio' ? 'active' : ''}`} onClick={() => setTab('estudio')}>
+          <span>📖</span>
           <span>Estudio</span>
         </button>
-        <button className={`nav-item ${tab === 'enfoque' ? 'active' : ''}`} onClick={() => setTab('enfoque')}>
-          🌙
+        <button className={`nav-btn ${tab === 'enfoque' ? 'active' : ''}`} onClick={() => setTab('enfoque')}>
+          <span>🌙</span>
           <span>Enfoque</span>
         </button>
-        <button className={`nav-item ${tab === 'perfil' ? 'active' : ''}`} onClick={() => setTab('perfil')}>
-          👤
+        <button className={`nav-btn ${tab === 'perfil' ? 'active' : ''}`} onClick={() => setTab('perfil')}>
+          <span>👤</span>
           <span>Perfil</span>
         </button>
       </nav>
