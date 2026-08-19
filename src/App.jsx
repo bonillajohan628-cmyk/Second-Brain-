@@ -34,8 +34,6 @@ export default function App() {
   const [memories, setMemories] = useState([])
   const [memoryType, setMemoryType] = useState('Meta')
   const [memoryText, setMemoryText] = useState('')
-  const [reminderMinutes, setReminderMinutes] = useState('')
-
   const [studyTopic, setStudyTopic] = useState('')
   const [aiAnswer, setAiAnswer] = useState('')
   const [loadingAI, setLoadingAI] = useState(false)
@@ -48,7 +46,6 @@ export default function App() {
     } else if (pomodoroTime === 0 && isPomoRunning) {
       setIsPomoRunning(false)
       setStudyMin((prev) => prev + 25)
-      alert('¡Pomodoro completado!')
     }
     return () => clearInterval(timer)
   }, [isPomoRunning, pomodoroTime])
@@ -77,24 +74,16 @@ export default function App() {
   }
 
   const handleLogout = () => { setUser(null); localStorage.removeItem('sb_user') }
-  const handleAddTask = () => { setTasks([...tasks, { id: Date.now(), text: newTask, done: false }]); setNewTask('') }
+  const handleAddTask = () => { if(!newTask.trim()) return; setTasks([...tasks, { id: Date.now(), text: newTask, done: false }]); setNewTask('') }
   const toggleTask = (id) => { setTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t)) }
-  const handleAddHabit = () => { setHabits([...habits, newHabit]); setNewHabit('') }
-  const handleAddDistraction = () => { 
-    if(!distractionMin) return
-    setDistractions([...distractions, { category: distractionCategory, min: distractionMin }])
-    setDistractionMin('')
-  }
-  const handleAddMemory = () => {
-    if (!memoryText.trim()) return
-    setMemories([...memories, { type: memoryType, text: memoryText }])
-    setMemoryText('')
-  }
+  const handleAddHabit = () => { if(!newHabit.trim()) return; setHabits([...habits, newHabit]); setNewHabit('') }
+  const handleAddDistraction = () => { if(!distractionMin) return; setDistractions([...distractions, { category: distractionCategory, min: distractionMin }]); setDistractionMin('') }
+  const handleAddMemory = () => { if (!memoryText.trim()) return; setMemories([...memories, { type: memoryType, text: memoryText }]); setMemoryText('') }
 
   const askAI = async (promptText) => {
     if (!promptText || !promptText.trim()) return
     setLoadingAI(true)
-    setAiAnswer('⚡ Consultando a la IA...')
+    setAiAnswer('⚡ Consultando...')
     try {
       const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(promptText)}?model=mistral`)
       if (res.ok) setAiAnswer(await res.text())
@@ -112,16 +101,16 @@ export default function App() {
     return (
       <div className="login-wrapper">
         <div className="login-center-content">
-          <h1>Second Brain</h1>
+          <h1 className="brand-title">Second Brain</h1>
           <button className="btn-google-login" onClick={() => setShowAuthModal(true)}>Continuar con Google</button>
         </div>
         {showAuthModal && (
           <div className="modal-overlay">
             <div className="card">
-              <h3>Tu nombre</h3>
+              <h3>Ingresar</h3>
               <form onSubmit={handleGoogleLoginSubmit}>
                 <input placeholder="Nombre" value={loginName} onChange={(e) => setLoginName(e.target.value)} required />
-                <button type="submit" className="btn-green-main">Ingresar</button>
+                <button type="submit" className="btn-green-main">Entrar</button>
               </form>
             </div>
           </div>
@@ -135,54 +124,55 @@ export default function App() {
       <main className="container">
         {tab === 'inicio' && (
           <>
-            <div className="card streak-hero"><div>{streak} DÍAS DE RACHA</div></div>
-            <div className="card"><h3>Tareas</h3><input value={newTask} onChange={(e) => setNewTask(e.target.value)} /><button onClick={handleAddTask}>+</button>
+            <div className="card streak-hero"><div className="streak-number">{streak}</div><div className="streak-sub">DÍAS DE RACHA</div></div>
+            <div className="card"><h3>Tareas pendientes</h3>
+              <div className="input-row"><input placeholder="Añadir tarea" value={newTask} onChange={(e) => setNewTask(e.target.value)} /><button className="btn-icon-square" onClick={handleAddTask}>+</button></div>
               {tasks.map(t => <div key={t.id}><input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id)} /> {t.text}</div>)}
             </div>
             <div className="card"><h3>Memoria</h3>
               <input value={memoryText} onChange={(e) => setMemoryText(e.target.value)} placeholder="Escribe..." />
-              <button onClick={handleAddMemory}>Guardar</button>
-              {memories.map((m, i) => <div key={i}>[{m.type}] {m.text}</div>)}
+              <button className="btn-green-main" onClick={handleAddMemory}>Guardar</button>
+              {memories.map((m, i) => <div key={i} className="memory-item">[{m.type}] {m.text}</div>)}
             </div>
           </>
         )}
         {tab === 'habitos' && (
-          <div className="card"><h3>Hábitos</h3>
-            {habits.map((h, i) => <div key={i}>🌱 {h}</div>)}
-            <input value={newHabit} onChange={(e) => setNewHabit(e.target.value)} /><button onClick={handleAddHabit}>+</button>
+          <div className="card"><h3>Mis Hábitos</h3>
+            {habits.map((h, i) => <div key={i} className="habit-item">🌱 {h}</div>)}
+            <div className="input-row"><input placeholder="Nuevo hábito" value={newHabit} onChange={(e) => setNewHabit(e.target.value)} /><button className="btn-icon-square" onClick={handleAddHabit}>+</button></div>
           </div>
         )}
         {tab === 'estudio' && (
-          <div className="card">
-            <h3>Pomodoro</h3>
-            <div className="timer-time">{formatSeconds(pomodoroTime)}</div>
-            <button onClick={() => setIsPomoRunning(!isPomoRunning)}>{isPomoRunning ? 'Pausar' : 'Iniciar'}</button>
+          <div className="card timer-container"><h3>Pomodoro</h3>
+            <div className="circle-timer"><div className="timer-time">{formatSeconds(pomodoroTime)}</div></div>
+            <button className="btn-green-main" onClick={() => setIsPomoRunning(!isPomoRunning)}>{isPomoRunning ? '⏸ Pausar' : '▶ Iniciar'}</button>
             <input placeholder="Tema IA" value={studyTopic} onChange={(e) => setStudyTopic(e.target.value)} />
-            <button onClick={() => askAI(studyTopic)} disabled={loadingAI}>Preguntar IA</button>
-            {aiAnswer && <div className="card">{aiAnswer}</div>}
+            <button className="btn-green-main" onClick={() => askAI(studyTopic)} disabled={loadingAI}>Consultar IA</button>
+            {aiAnswer && <div className="card ai-response">{aiAnswer}</div>}
           </div>
         )}
         {tab === 'enfoque' && (
-          <div className="card">
-            <h3>Enfoque</h3>
-            <div className="timer-time">{formatSeconds(focusTime)}</div>
-            <button onClick={() => setIsFocusRunning(!isFocusRunning)}>{isFocusRunning ? 'Detener' : 'Iniciar'}</button>
-            <div>
-              <button onClick={() => setAmbientSound('rain')}>🌧️ Lluvia</button>
-              <button onClick={() => setAmbientSound('lofi')}>🎧 Lo-Fi</button>
+          <div className="card timer-container"><h3>Modo Enfoque</h3>
+            <div className="circle-timer"><div className="timer-time">{formatSeconds(focusTime)}</div></div>
+            <button className="btn-green-main" onClick={() => setIsFocusRunning(!isFocusRunning)}>{isFocusRunning ? '⏸ Detener' : '🌙 Iniciar Enfoque'}</button>
+            <div className="tags-row">
+              <button className={`tag-btn ${ambientSound === 'rain' ? 'active' : ''}`} onClick={() => setAmbientSound('rain')}>🌧️ Lluvia</button>
+              <button className={`tag-btn ${ambientSound === 'lofi' ? 'active' : ''}`} onClick={() => setAmbientSound('lofi')}>🎧 Lo-Fi</button>
+              <button className={`tag-btn ${ambientSound === 'none' ? 'active' : ''}`} onClick={() => setAmbientSound('none')}>Apagar</button>
             </div>
             {ambientSound === 'rain' && <audio autoPlay loop src="https://assets.mixkit.co/active_storage/sfx/2515/2515-preview.mp3" />}
             {ambientSound === 'lofi' && <audio autoPlay loop src="https://assets.mixkit.co/active_storage/sfx/1253/1253-preview.mp3" />}
-            <input type="number" placeholder="Minutos perdidos" value={distractionMin} onChange={(e) => setDistractionMin(e.target.value)} />
-            <button onClick={handleAddDistraction}>Registrar Distracción</button>
+            <div className="input-row"><input type="number" placeholder="Minutos perdidos" value={distractionMin} onChange={(e) => setDistractionMin(e.target.value)} /><button className="btn-icon-square" onClick={handleAddDistraction}>+</button></div>
           </div>
         )}
-        {tab === 'perfil' && <div className="card"><h3>{user.name}</h3><button onClick={handleLogout}>Cerrar sesión</button></div>}
+        {tab === 'perfil' && <div className="card"><h3>{user.name}</h3><button className="btn-logout" onClick={handleLogout}>Cerrar sesión</button></div>}
       </main>
       <nav className="bottom-nav">
-        <button onClick={() => setTab('inicio')}>🏠</button><button onClick={() => setTab('habitos')}>🍃</button>
-        <button onClick={() => setTab('estudio')}>📖</button><button onClick={() => setTab('enfoque')}>🌙</button>
-        <button onClick={() => setTab('perfil')}>👤</button>
+        <button className={`nav-item ${tab === 'inicio' ? 'active' : ''}`} onClick={() => setTab('inicio')}>🏠</button>
+        <button className={`nav-item ${tab === 'habitos' ? 'active' : ''}`} onClick={() => setTab('habitos')}>🍃</button>
+        <button className={`nav-item ${tab === 'estudio' ? 'active' : ''}`} onClick={() => setTab('estudio')}>📖</button>
+        <button className={`nav-item ${tab === 'enfoque' ? 'active' : ''}`} onClick={() => setTab('enfoque')}>🌙</button>
+        <button className={`nav-item ${tab === 'perfil' ? 'active' : ''}`} onClick={() => setTab('perfil')}>👤</button>
       </nav>
     </div>
   )
