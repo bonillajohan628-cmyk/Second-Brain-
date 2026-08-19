@@ -1,24 +1,93 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import './App.css'
 
 export default function App() {
+  // --- AUTENTICACIÓN LOCAL ---
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('sb_user')
+    return saved ? JSON.parse(saved) : null
+  })
+  const [loginName, setLoginName] = useState('')
+  const [loginEmail, setLoginEmail] = useState('')
+
+  // --- NAVEGACIÓN ---
   const [tab, setTab] = useState('inicio')
   const [lang, setLang] = useState('ES')
 
-  const [streak] = useState(0)
-  const [studyMin] = useState(0)
-  const [focusLevel] = useState(0)
-  const [tasks, setTasks] = useState([{ id: 1, text: 'Comer', done: false }])
+  // --- ESTADOS DE DATOS ---
+  const [streak, setStreak] = useState(1)
+  const [studyMin, setStudyMin] = useState(0)
+  const [focusLevel, setFocusLevel] = useState(100)
+  
+  const [tasks, setTasks] = useState([
+    { id: 1, text: 'Completar sesión de estudio', done: false }
+  ])
   const [newTask, setNewTask] = useState('')
 
-  const [timerTime] = useState(25)
-  const [isTimerRunning, setIsTimerRunning] = useState(false)
-  const [distractionMin, setDistractionMin] = useState('')
+  const [habits, setHabits] = useState(['Leer 20 min', 'Hacer ejercicio'])
+  const [newHabit, setNewHabit] = useState('')
 
+  // --- TEMPORIZADOR POMODORO ---
+  const [pomodoroTime, setPomodoroTime] = useState(25 * 60)
+  const [isPomoRunning, setIsPomoRunning] = useState(false)
+  const [pomoSubject, setPomoSubject] = useState('')
+
+  // --- TEMPORIZADOR ENFOQUE ---
+  const [focusTime, setFocusTime] = useState(0)
+  const [isFocusRunning, setIsFocusRunning] = useState(false)
+  const [distractions, setDistractions] = useState([])
+  const [distractionMin, setDistractionMin] = useState('')
+  const [distractionCategory, setDistractionCategory] = useState('Redes sociales')
+
+  // --- MEMORIA E IA ---
+  const [memories, setMemories] = useState([])
   const [memoryType, setMemoryType] = useState('Meta')
   const [memoryText, setMemoryText] = useState('')
+  
+  const [studyTopic, setStudyTopic] = useState('')
   const [aiQuestion, setAiQuestion] = useState('')
   const [aiAnswer, setAiAnswer] = useState('')
+  const [loadingAI, setLoadingAI] = useState(false)
+
+  // Timer Pomodoro Effect
+  useEffect(() => {
+    let timer = null
+    if (isPomoRunning && pomodoroTime > 0) {
+      timer = setInterval(() => {
+        setPomodoroTime((prev) => prev - 1)
+      }, 1000)
+    } else if (pomodoroTime === 0 && isPomoRunning) {
+      setIsPomoRunning(false)
+      setStudyMin((prev) => prev + 25)
+      alert('¡Tiempo de Pomodoro finalizado! Buen trabajo.')
+    }
+    return () => clearInterval(timer)
+  }, [isPomoRunning, pomodoroTime])
+
+  // Timer Enfoque Effect
+  useEffect(() => {
+    let timer = null
+    if (isFocusRunning) {
+      timer = setInterval(() => {
+        setFocusTime((prev) => prev + 1)
+      }, 1000)
+    }
+    return () => clearInterval(timer)
+  }, [isFocusRunning])
+
+  // --- HANDLERS ---
+  const handleLogin = (e) => {
+    e.preventDefault()
+    if (!loginName.trim()) return
+    const userData = { name: loginName, email: loginEmail || `${loginName.toLowerCase()}@local.com` }
+    setUser(userData)
+    localStorage.setItem('sb_user', JSON.stringify(userData))
+  }
+
+  const handleLogout = () => {
+    setUser(null)
+    localStorage.removeItem('sb_user')
+  }
 
   const handleAddTask = () => {
     if (!newTask.trim()) return
@@ -26,21 +95,81 @@ export default function App() {
     setNewTask('')
   }
 
-  const askAI = async (prompt) => {
-    if (!prompt.trim()) return
+  const toggleTask = (id) => {
+    setTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t))
+  }
+
+  const handleAddHabit = () => {
+    if (!newHabit.trim()) return
+    setHabits([...habits, newHabit])
+    setNewHabit('')
+  }
+
+  const handleAddDistraction = () => {
+    if (!distractionMin) return
+    const mins = parseInt(distractionMin) || 0
+    setDistractions([...distractions, { category: distractionCategory, min: mins }])
+    setDistractionMin('')
+    setFocusLevel((prev) => Math.max(0, prev - 10))
+  }
+
+  const handleAddMemory = () => {
+    if (!memoryText.trim()) return
+    setMemories([...memories, { type: memoryType, text: memoryText }])
+    setMemoryText('')
+  }
+
+  const askAI = async (promptText) => {
+    if (!promptText.trim()) return
+    setLoadingAI(true)
     setAiAnswer('Pensando...')
     try {
-      const res = await fetch('https://text.pollinations.ai/' + encodeURIComponent(prompt))
+      const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(promptText)}?model=openai`)
       const text = await res.text()
       setAiAnswer(text)
     } catch {
-      setAiAnswer('Error de conexión.')
+      setAiAnswer('Error al conectar con la IA. Intenta de nuevo.')
+    } finally {
+      setLoadingAI(false)
     }
+  }
+
+  const formatSeconds = (sec) => {
+    const m = Math.floor(sec / 60).toString().padStart(2, '0')
+    const s = (sec % 60).toString().padStart(2, '0')
+    return `${m}:${s}`
+  }
+
+  // --- VISTA DE LOGIN SI NO HAY USUARIO ---
+  if (!user) {
+    return (
+      <div className="container" style={{ marginTop: '50px' }}>
+        <div className="card" style={{ textAlign: 'center' }}>
+          <h2 style={{ marginBottom: '15px' }}>Iniciar Sesión</h2>
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <input 
+              placeholder="Tu nombre" 
+              value={loginName} 
+              onChange={(e) => setLoginName(e.target.value)} 
+              required 
+            />
+            <input 
+              placeholder="Correo electrónico" 
+              type="email"
+              value={loginEmail} 
+              onChange={(e) => setLoginEmail(e.target.value)} 
+            />
+            <button type="submit" className="btn-green-main">Ingresar</button>
+          </form>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div>
       <main className="container">
+        {/* INICIO */}
         {tab === 'inicio' && (
           <>
             <div className="card streak-hero">
@@ -52,7 +181,7 @@ export default function App() {
             <div className="ia-speech-bubble">
               <span style={{ color: '#00e676', fontSize: '1.2rem' }}>✦</span>
               <div>
-                Hoy está en blanco total: cero racha, cero tareas, cero minutos. Buen momento para empezar de cero, sin drama.
+                ¡Hola {user.name}! Tienes {tasks.filter(t => !t.done).length} tareas pendientes hoy.
               </div>
             </div>
 
@@ -81,14 +210,22 @@ export default function App() {
               </div>
               {tasks.map(t => (
                 <div key={t.id} style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '8px 0' }}>
-                  <input type="checkbox" style={{ width: '20px', height: '20px' }} readOnly checked={t.done} />
-                  <span>{t.text}</span>
+                  <input 
+                    type="checkbox" 
+                    style={{ width: '20px', height: '20px', cursor: 'pointer' }} 
+                    checked={t.done} 
+                    onChange={() => toggleTask(t.id)}
+                  />
+                  <span style={{ textDecoration: t.done ? 'line-through' : 'none', color: t.done ? '#666' : '#fff' }}>
+                    {t.text}
+                  </span>
                 </div>
               ))}
             </div>
           </>
         )}
 
+        {/* HÁBITOS */}
         {tab === 'habitos' && (
           <>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Hábitos</h2>
@@ -98,150 +235,142 @@ export default function App() {
             </div>
 
             <div className="card">
-              <h3 className="card-title">Progreso semanal</h3>
-              <div className="days-grid" style={{ marginTop: '15px' }}>
-                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
-                  <div key={i} className="day-col">
-                    <span className="day-text">{d}</span>
-                  </div>
+              <h3 className="card-title">Mis Hábitos</h3>
+              <ul style={{ listStyle: 'none', marginBottom: '15px' }}>
+                {habits.map((h, i) => (
+                  <li key={i} style={{ padding: '8px 0', borderBottom: '1px solid #222' }}>🌱 {h}</li>
                 ))}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', margin: '15px 0' }}>
-                🌱 Nuevo hábito
-              </div>
+              </ul>
               <div className="input-row">
-                <input placeholder="Ej: Leer 20 min" />
-                <button className="btn-icon-square">+</button>
+                <input 
+                  placeholder="Ej: Leer 20 min" 
+                  value={newHabit}
+                  onChange={(e) => setNewHabit(e.target.value)}
+                />
+                <button className="btn-icon-square" onClick={handleAddHabit}>+</button>
               </div>
             </div>
           </>
         )}
 
+        {/* ESTUDIO */}
         {tab === 'estudio' && (
           <>
             <div className="card timer-container">
               <div className="circle-timer">
-                <div className="timer-time">{timerTime}:00</div>
+                <div className="timer-time">{formatSeconds(pomodoroTime)}</div>
                 <div className="timer-label">POMODORO</div>
               </div>
-              <input placeholder="Ej: Matemáticas" style={{ textAlign: 'center', maxWidth: '80%', marginBottom: '15px' }} />
-              <button className="btn-green-main" onClick={() => setIsTimerRunning(!isTimerRunning)}>
-                ▶ {isTimerRunning ? 'Pausar' : 'Iniciar'}
-              </button>
+              <input 
+                placeholder="Materia (ej: Matemáticas)" 
+                value={pomoSubject}
+                onChange={(e) => setPomoSubject(e.target.value)}
+                style={{ textAlign: 'center', maxWidth: '80%', marginBottom: '15px' }} 
+              />
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button className="btn-green-main" onClick={() => setIsPomoRunning(!isPomoRunning)}>
+                  {isPomoRunning ? '⏸ Pausar' : '▶ Iniciar'}
+                </button>
+                <button className="btn-logout" onClick={() => { setIsPomoRunning(false); setPomodoroTime(25 * 60); }}>
+                  🔄 Reset
+                </button>
+              </div>
             </div>
 
             <div className="card">
               <h3 className="card-title" style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                Resumen rápido • Explicación sencilla • Preguntas tipo examen
+                Asistente de Estudio IA
               </h3>
-              <input placeholder="Ej: Ecuaciones lineales" style={{ marginBottom: '12px' }} />
+              <input 
+                placeholder="Tema a consultar (Ej: Tema de examen)" 
+                value={studyTopic}
+                onChange={(e) => setStudyTopic(e.target.value)}
+                style={{ marginBottom: '12px' }} 
+              />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <button className="tag-btn" style={{ justifyContent: 'flex-start' }} onClick={() => askAI('Dame un resumen rápido de ecuaciones lineales')}>
+                <button className="tag-btn" style={{ justifyContent: 'flex-start' }} onClick={() => askAI(`Dame un resumen rápido de: ${studyTopic}`)}>
                   📄 Resumen rápido
                 </button>
-                <button className="tag-btn" style={{ justifyContent: 'flex-start' }} onClick={() => askAI('Dame una explicación sencilla de ecuaciones lineales')}>
+                <button className="tag-btn" style={{ justifyContent: 'flex-start' }} onClick={() => askAI(`Explicación sencilla de: ${studyTopic}`)}>
                   💡 Explicación sencilla
                 </button>
-                <button className="tag-btn" style={{ justifyContent: 'flex-start' }} onClick={() => askAI('Genera preguntas tipo examen sobre ecuaciones lineales')}>
+                <button className="tag-btn" style={{ justifyContent: 'flex-start' }} onClick={() => askAI(`Genera 3 preguntas tipo examen sobre: ${studyTopic}`)}>
                   ❓ Preguntas tipo examen
                 </button>
               </div>
-              {aiAnswer && <div style={{ marginTop: '15px', padding: '12px', background: '#1a1a1a', borderRadius: '10px', fontSize: '0.85rem' }}>{aiAnswer}</div>}
+              {aiAnswer && (
+                <div style={{ marginTop: '15px', padding: '12px', background: '#1a1a1a', borderRadius: '10px', fontSize: '0.85rem', whiteSpace: 'pre-wrap' }}>
+                  {aiAnswer}
+                </div>
+              )}
             </div>
           </>
         )}
 
+        {/* ENFOQUE */}
         {tab === 'enfoque' && (
           <>
             <div className="card timer-container">
-              <div className="circle-timer" style={{ borderColor: '#222' }}>
-                <div className="timer-time">00:00</div>
-                <div className="timer-label">TIEMPO</div>
+              <div className="circle-timer" style={{ borderColor: isFocusRunning ? '#00e676' : '#222' }}>
+                <div className="timer-time">{formatSeconds(focusTime)}</div>
+                <div className="timer-label">TIEMPO ENFOCADO</div>
               </div>
-              <button className="btn-green-main">🌙 Iniciar</button>
+              <button className="btn-green-main" onClick={() => setIsFocusRunning(!isFocusRunning)}>
+                {isFocusRunning ? '⏸ Detener' : '🌙 Iniciar Enfoque'}
+              </button>
             </div>
 
             <div className="card">
-              <h3 className="card-title">Distracciones • Registrar distracción</h3>
-              <input
-                placeholder="min (ej: 15)"
-                value={distractionMin}
-                onChange={(e) => setDistractionMin(e.target.value)}
-                style={{ marginBottom: '12px' }}
-              />
-              <div className="tags-row" style={{ marginBottom: '15px' }}>
-                <button className="tag-btn">💬 Redes sociales</button>
-                <button className="tag-btn">▶ YouTube</button>
-                <button className="tag-btn">🎮 Videojuegos</button>
-                <button className="tag-btn">••• Otro</button>
+              <h3 className="card-title">Registrar distracción</h3>
+              <div className="input-row" style={{ marginBottom: '12px' }}>
+                <input
+                  placeholder="Minutos perdidos (ej: 15)"
+                  type="number"
+                  value={distractionMin}
+                  onChange={(e) => setDistractionMin(e.target.value)}
+                />
+                <button className="btn-icon-square" onClick={handleAddDistraction}>+</button>
               </div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#f59e0b' }}>0 min</div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Todas las apps</div>
+              <div className="tags-row" style={{ marginBottom: '15px' }}>
+                {['Redes sociales', 'YouTube', 'Videojuegos', 'Otro'].map((cat) => (
+                  <button 
+                    key={cat} 
+                    className={`tag-btn ${distractionCategory === cat ? 'active' : ''}`}
+                    onClick={() => setDistractionCategory(cat)}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              
+              <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#f59e0b' }}>
+                {distractions.reduce((acc, d) => acc + d.min, 0)} min perdidos
+              </div>
+              <ul style={{ listStyle: 'none', marginTop: '10px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                {distractions.map((d, i) => (
+                  <li key={i}>• {d.category}: {d.min} min</li>
+                ))}
+              </ul>
             </div>
           </>
         )}
 
+        {/* PERFIL */}
         {tab === 'perfil' && (
           <>
             <div className="card profile-header">
               <div className="user-info">
-                <div className="avatar">J</div>
+                <div className="avatar">{user.name.charAt(0).toUpperCase()}</div>
                 <div>
-                  <div className="user-name">Johan</div>
-                  <div className="user-email">johanpro1106@gmail.com</div>
+                  <div className="user-name">{user.name}</div>
+                  <div className="user-email">{user.email}</div>
                 </div>
               </div>
-              <button className="btn-logout">➔| Cerrar sesión</button>
-            </div>
-
-            <div className="card">
-              <h3 className="card-title">Idioma</h3>
-              <div className="tags-row">
-                <button className={`tag-btn ${lang === 'ES' ? 'active' : ''}`} onClick={() => setLang('ES')}>ES</button>
-                <button className={`tag-btn ${lang === 'EN' ? 'active' : ''}`} onClick={() => setLang('EN')}>EN</button>
-              </div>
-            </div>
-
-            <div className="card">
-              <h3 className="card-title">Análisis semanal</h3>
-              <div className="chart-section">
-                <div className="chart-label">Estudio (min)</div>
-                <div className="days-grid">
-                  {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
-                    <div key={i} className="day-col">
-                      <div className="bar-line green"></div>
-                      <span className="day-text">{d}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="chart-label">Enfoque (min)</div>
-                <div className="days-grid">
-                  {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
-                    <div key={i} className="day-col">
-                      <div className="bar-line blue"></div>
-                      <span className="day-text">{d}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="chart-label">Hábitos</div>
-                <div className="days-grid">
-                  {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
-                    <div key={i} className="day-col">
-                      <div className="bar-line green"></div>
-                      <span className="day-text">{d}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <button className="btn-logout" onClick={handleLogout}>➔| Cerrar sesión</button>
             </div>
 
             <div className="card">
               <h3 className="card-title">Memoria inteligente</h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                Guarda metas, hábitos, materias difíciles y pensamientos. La IA los recuerda.
-              </p>
               <div className="tags-row" style={{ marginBottom: '12px' }}>
                 {['Meta', 'Hábito', 'Materia difícil', 'Horario', 'Pensamiento'].map((t) => (
                   <button
@@ -259,11 +388,15 @@ export default function App() {
                   value={memoryText}
                   onChange={(e) => setMemoryText(e.target.value)}
                 />
-                <button className="btn-icon-square">+</button>
+                <button className="btn-icon-square" onClick={handleAddMemory}>+</button>
               </div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-                Aún no has guardado nada. Empieza con una meta pequeña.
-              </div>
+              <ul style={{ listStyle: 'none', fontSize: '0.85rem' }}>
+                {memories.map((m, i) => (
+                  <li key={i} style={{ padding: '6px 0', borderBottom: '1px solid #222' }}>
+                    <strong style={{ color: '#00e676' }}>[{m.type}]</strong> {m.text}
+                  </li>
+                ))}
+              </ul>
             </div>
 
             <div className="card">
@@ -274,8 +407,8 @@ export default function App() {
                 onChange={(e) => setAiQuestion(e.target.value)}
                 style={{ marginBottom: '12px' }}
               />
-              <button className="btn-green-main" style={{ width: '100%' }} onClick={() => askAI(aiQuestion)}>
-                ✦ Preguntar
+              <button className="btn-green-main" style={{ width: '100%' }} onClick={() => askAI(aiQuestion)} disabled={loadingAI}>
+                ✦ {loadingAI ? 'Consultando...' : 'Preguntar'}
               </button>
             </div>
           </>
